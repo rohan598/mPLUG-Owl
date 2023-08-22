@@ -23,8 +23,8 @@ DISTRIBUTED_ARGS="--nproc_per_node 8 \
 EXP_NAME=sft_v0.1
 SAVE_NAME=sft_v0.1_ft_grad_ckpt
 
-SAVE_PATH="./output/${SAVE_NAME}/"
-
+SAVE_PATH="/data1/rwadhawan/document_understanding/results/mplug_owl/${SAVE_NAME}/"  
+# "./output/${SAVE_NAME}/"
 max_length=2048
 micro_batch_size=1
 global_batch_size=256
@@ -43,9 +43,9 @@ eval_interval=50
 save_interval=500
 
 mkdir -p ${SAVE_PATH}
-
+# --pretrained-ckpt MAGAer13/mplug-owl-llama-7b-pt \
 options=" \
-	--pretrained-ckpt MAGAer13/mplug-owl-llama-7b-pt \
+	--pretrained-ckpt /data1/rwadhawan/document_understanding/models/mplug-owl-llama-7b-ft \
 	--seq-length ${max_length} \
 	--micro-batch-size ${micro_batch_size} \
     --train-epochs ${train_epochs} \
