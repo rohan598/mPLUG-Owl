@@ -1,6 +1,6 @@
 data_files: [
-    '/data1/rwadhawan/document_understanding/datasets/instruction_tune/scanned_documents/train.jsonl',
-    '/data1/rwadhawan/document_understanding/datasets/instruction_tune/scanned_documents/dev.jsonl'
+    '/local1/rwadhawan/document_understanding/datasets/instruction_tune/scanned_documents/train.jsonl',
+    '/local1/rwadhawan/document_understanding/datasets/instruction_tune/scanned_documents/dev.jsonl'
     # 'sft_v0.1_train.jsonl',
     # 'sft_v0.1_dev.jsonl'
 ]

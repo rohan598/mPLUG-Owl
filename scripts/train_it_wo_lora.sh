@@ -23,7 +23,7 @@ DISTRIBUTED_ARGS="--nproc_per_node 8 \
 EXP_NAME=sft_v0.1
 SAVE_NAME=sft_v0.1_ft_grad_ckpt
 
-SAVE_PATH="/data1/rwadhawan/document_understanding/results/mplug_owl/${SAVE_NAME}/"  
+SAVE_PATH="/local1/rwadhawan/document_understanding/results/mplug_owl/${SAVE_NAME}/"  
 # "./output/${SAVE_NAME}/"
 max_length=2048
 micro_batch_size=1
@@ -32,7 +32,7 @@ gradient_accumulation_steps=4
 
 # train_iters = total_data * train_epochs // global_batch_size
 # 361481 * 3 / 256 = 4236
-train_epochs=3
+train_epochs=2
 train_iters=4236
 
 lr_warmup_iters=50
@@ -45,7 +45,7 @@ save_interval=500
 mkdir -p ${SAVE_PATH}
 # --pretrained-ckpt MAGAer13/mplug-owl-llama-7b-pt \
 options=" \
-	--pretrained-ckpt /data1/rwadhawan/document_understanding/models/mplug-owl-llama-7b-ft \
+	--pretrained-ckpt /local1/rwadhawan/document_understanding/models/mplug-owl-llama-7b-ft \
 	--seq-length ${max_length} \
 	--micro-batch-size ${micro_batch_size} \
     --train-epochs ${train_epochs} \

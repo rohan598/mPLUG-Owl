@@ -170,3 +170,7 @@ tags
 
 # ruff
 .ruff_cache
+
+# scripts and configs
+scripts/
+configs/
