@@ -1,6 +1,8 @@
 import argparse
 from functools import partial
 
+import pandas as pd
+import os
 import torch
 import torch.distributed as dist
 from torch.utils.data import DataLoader, Dataset
@@ -130,8 +132,9 @@ class CustomTrainer(Trainer):
 def main():
     args, left_argv = parser.parse_known_args()  
     ic(left_argv)
+    data_files = left_argv[2][1:-1].split(",")
     config = Config(args.mm_config)
-
+    config["data_files"] = data_files
     set_args(args)
 
     model = MplugOwlForConditionalGeneration.from_pretrained(
@@ -209,6 +212,8 @@ def main():
         model = torch.compile(model)
 
     trainer.train()
+    loss_history = pd.DataFrame(trainer.state.log_history)
+    loss_history.to_csv(os.path.join(args.save_path, "loss.txt"), index=False) 
 
     model.save_pretrained(args.save_path)
 

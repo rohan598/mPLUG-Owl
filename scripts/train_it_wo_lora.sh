@@ -21,29 +21,28 @@ DISTRIBUTED_ARGS="--nproc_per_node 8 \
                   --master_port ${MASTER_PORT}"
 
 EXP_NAME=sft_v0.1
-SAVE_NAME=sft_v0.1_ft_grad_ckpt
+SAVE_NAME="sft_v0.1_ft_grad_ckpt_dataset_lr_$1-$2-${DATETIME}"
 
 SAVE_PATH="/local1/rwadhawan/document_understanding/results/mplug_owl/${SAVE_NAME}/"  
 # "./output/${SAVE_NAME}/"
 max_length=2048
 micro_batch_size=1
-global_batch_size=256
+global_batch_size=64 # global_batch_size = micro_batch_size * num_gpu * grad_acc_step
 gradient_accumulation_steps=4
 
 # train_iters = total_data * train_epochs // global_batch_size
 # 361481 * 3 / 256 = 4236
-train_epochs=2
-train_iters=4236
+train_epochs=1
+train_iters=7
 
-lr_warmup_iters=50
+lr_warmup_iters=4
 lr_decay_iters=`expr $train_iters - $lr_warmup_iters`
 
-eval_iter=50
-eval_interval=50
-save_interval=500
+eval_iter=4
+# eval_interval=4
+save_interval=4
 
 mkdir -p ${SAVE_PATH}
-# --pretrained-ckpt MAGAer13/mplug-owl-llama-7b-pt \
 options=" \
 	--pretrained-ckpt /local1/rwadhawan/document_understanding/models/mplug-owl-llama-7b-ft \
 	--seq-length ${max_length} \
@@ -52,7 +51,7 @@ options=" \
 	--num-warmup-steps ${lr_warmup_iters} \
 	--num-training-steps ${train_iters} \
 	--gradient-accumulation-steps ${gradient_accumulation_steps} \
-	--lr 1e-5 \
+	--lr $2 \
 	--min-lr 1e-6 \
 	--eval-iters ${eval_iter} \
     --save-interval ${save_interval} \
@@ -63,7 +62,7 @@ options=" \
 	--adam-beta2 0.999 \
 	--num-workers 32 \
 	--gradient-checkpointing \
-	--bf16"
+	--bf16 "
 
 multimodal_options=" \
 	--mm-config configs/v0.yaml 

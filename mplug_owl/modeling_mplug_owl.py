@@ -1273,7 +1273,7 @@ class MplugOwlForConditionalGeneration(MplugOwlPreTrainedModel):
         from transformers import GenerationConfig
 
         self.generation_config = GenerationConfig(
-            max_length=3096, do_sample=True, top_k=3, pad_token_id=0, unk_token_id=0, bos_token_id=1, eos_token_id=2
+            max_length=512, do_sample=True, top_k=3, pad_token_id=0, unk_token_id=0, bos_token_id=1, eos_token_id=2
         )
         if config.text_config.model_type == 'bloom':
             bound_method = bloom_forward.__get__(self.language_model.transformer, self.language_model.transformer.__class__)
@@ -1468,10 +1468,10 @@ class MplugOwlForConditionalGeneration(MplugOwlPreTrainedModel):
             return_dict=return_dict,
             output_attentions=self.config.output_attentions,
         )
-        print(f"before loss {outputs.loss}")
-        outputs.loss = (outputs.loss * loss_mask.view(-1)
-                        ).sum()/loss_mask.sum()
-        print(f"after loss {outputs.loss}")
+        # print(f"before loss {outputs.loss}")
+        # outputs.loss = (outputs.loss * loss_mask.view(-1)
+        #                 ).sum()/loss_mask.sum()
+        # print(f"after loss {outputs.loss}")
         return outputs
 
     @torch.no_grad()
