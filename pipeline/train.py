@@ -165,10 +165,14 @@ def main():
                 partial(model.language_model._set_gradient_checkpointing, value=True))
 
     else:
+        print("model_params", model.named_parameters())
         for name, param in model.named_parameters():
+            
             if 'language_model' in name:
+                print("lname",name)
                 param.requires_grad = True
             else:
+                print("oname",name)
                 param.requires_grad = False
         if args.gradient_checkpointing:
             model.language_model.apply(
