@@ -13,6 +13,7 @@ from icecream import ic
 from peft import LoraConfig, get_peft_config, get_peft_model
 from transformers import Trainer
 from transformers.training_args import TrainingArguments
+    from transformers.models.llama.tokenization_llama import LlamaTokenizer
 
 from mplug_owl import MplugOwlForConditionalGeneration, MplugOwlTokenizer
 from pipeline.data_utils import train_valid_test_datasets_provider
@@ -141,7 +142,8 @@ def main():
         args.pretrained_ckpt,
         torch_dtype=torch.bfloat16 if args.bf16 else torch.half,
     )
-    tokenizer = MplugOwlTokenizer.from_pretrained(args.pretrained_ckpt)
+    tokenizer = LlamaTokenizer.from_pretrained(args.pretrained_ckpt)
+    # tokenizer = MplugOwlTokenizer.from_pretrained(args.pretrained_ckpt)
 
     if args.use_lora:
         for param in model.parameters():
