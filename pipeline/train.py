@@ -10,10 +10,11 @@ from torch.utils.data.distributed import DistributedSampler
 
 from sconf import Config
 from icecream import ic
-from peft import LoraConfig, get_peft_config, get_peft_model
+from peft import LoraConfig, get_peft_config, get_peft_model, PeftConfig, PeftModel
+
 from transformers import Trainer
 from transformers.training_args import TrainingArguments
-    from transformers.models.llama.tokenization_llama import LlamaTokenizer
+from transformers.models.llama.tokenization_llama import LlamaTokenizer
 
 from mplug_owl import MplugOwlForConditionalGeneration, MplugOwlTokenizer
 from pipeline.data_utils import train_valid_test_datasets_provider
@@ -24,6 +25,8 @@ parser = argparse.ArgumentParser()
 # Model
 parser.add_argument('--pretrained-ckpt', type=str, default='MAGAer13/mplug-owl-llama-7b-pt',
                     help='Path to the pretrained checkpoint.')
+parser.add_argument('--lora-ckpt', type=str, default='',
+                    help='Path to the lora checkpoint.')
 parser.add_argument('--inference_mode', type=bool, default=False,
                     help='The inference mode.')
 parser.add_argument('--seq-length', type=int, default=1024,
@@ -133,11 +136,16 @@ class CustomTrainer(Trainer):
 def main():
     args, left_argv = parser.parse_known_args()  
     ic(left_argv)
-    data_files = left_argv[2][1:-1].split(",")
+    data_files = left_argv[1][1:-1].split(",")
     config = Config(args.mm_config)
     config["data_files"] = data_files
+    training_stage = 0 if "training_stage" not in config else config["training_stage"]
     set_args(args)
 
+    # print(config)
+
+    print(f"Training stage: {training_stage}")
+    print(f"lora : {args.use_lora}")
     model = MplugOwlForConditionalGeneration.from_pretrained(
         args.pretrained_ckpt,
         torch_dtype=torch.bfloat16 if args.bf16 else torch.half,
@@ -166,27 +174,88 @@ def main():
             model.language_model.apply(
                 partial(model.language_model._set_gradient_checkpointing, value=True))
 
+        final_model = model
+
+    elif training_stage == 1:
+        print("In training stage 1")
+
+        pytorch_total_params = sum(p.numel() for p in model.parameters())
+        pytorch_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+        print(f"Base model trainable params: {pytorch_trainable_params} and total params: {pytorch_total_params}")
+
+
+        peft_config = LoraConfig(
+            target_modules=r'.*language_model.*\.(q_proj|v_proj)', 
+            inference_mode=args.inference_mode, 
+            r=args.lora_r, 
+            lora_alpha=args.lora_alpha, 
+            lora_dropout=args.lora_dropout
+        )
+        stage1_model = get_peft_model(model, peft_config)
+        print("Stage 1 model params with trainable visual abstractor and LORA")
+        stage1_model.print_trainable_parameters()
+
+        for name, param in model.named_parameters():
+            if 'abstractor' in name or "lora" in name:
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+        
+        print("updated params")
+        stage1_model.print_trainable_parameters()
+        if args.gradient_checkpointing:
+            def make_inputs_require_grad(module, input, output):
+                output.requires_grad_(True)
+            model.language_model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+            model.language_model.apply(
+                partial(model.language_model._set_gradient_checkpointing, value=True))
+
+        final_model = stage1_model
+
+    elif training_stage == 2:
+        print("In training stage 2")
+
+        pytorch_total_params = sum(p.numel() for p in model.parameters())
+        pytorch_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+        print(f"Base model trainable params: {pytorch_trainable_params} and total params: {pytorch_total_params}")
+
+        # Load the LoRA model
+        lora_save_filepath = os.path.join("/".join(args.save_path.split("/")[:-1]),args.lora_ckpt)
+        stage1_model = PeftModel.from_pretrained(model=model, model_id=lora_save_filepath, is_trainable=True)
+        print("Stage 1 model params with trainable LORA")
+        stage1_model.print_trainable_parameters()
+    
+        final_model = stage1_model
+            
     else:
         print("model_params", model.named_parameters())
         for name, param in model.named_parameters():
             
             if 'language_model' in name:
-                print("lname",name)
                 param.requires_grad = True
             else:
-                print("oname",name)
                 param.requires_grad = False
         if args.gradient_checkpointing:
             model.language_model.apply(
                 partial(model.language_model._set_gradient_checkpointing, value=True))
 
-    model.train()
+        final_model = model
+
+    final_model.train()
 
     train_data, valid_data = train_valid_test_datasets_provider(
         config.data_files, config=config, 
         tokenizer=tokenizer, seq_length=args.seq_length
     )
 
+    # wandb params
+    # os.environ["WANDB_LOG_MODEL"] = "all"
+    os.environ["WANDB_WATCH"] = "all"
+
+    print(f"args.save_path.split('/')[-1] : {args.save_path.split('/')[-1]}")
+    print(f"args.save_path : {args.save_path}")
     trainer = CustomTrainer(
         model=model,
         train_dataset=train_data,
@@ -208,20 +277,23 @@ def main():
             fp16=not args.bf16,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
             gradient_checkpointing=args.gradient_checkpointing,
-            logging_steps=args.eval_iters//4,
+            logging_steps=args.eval_iters, #args.eval_iters//4,
             logging_nan_inf_filter=args.logging_nan_inf_filter,
             ddp_find_unused_parameters=args.ddp_find_unused_parameters,
+            report_to="wandb",
+            run_name=args.save_path.split("/")[-1]
         ),
     )
 
+
     if torch.__version__ >= "2" and sys.platform != "win32":
-        model = torch.compile(model)
+        final_model = torch.compile(final_model)
 
     trainer.train()
     loss_history = pd.DataFrame(trainer.state.log_history)
     loss_history.to_csv(os.path.join(args.save_path, "loss.txt"), index=False) 
 
-    model.save_pretrained(args.save_path)
+    final_model.save_pretrained(args.save_path)
 
 if __name__ == '__main__':
     main()

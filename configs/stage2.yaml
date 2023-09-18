@@ -12,3 +12,5 @@ train_processors: {
 valid_processors: {
   sft: {type: 'DefaultProcessor', image_size: 224}
 }
+
+training_stage : 2
