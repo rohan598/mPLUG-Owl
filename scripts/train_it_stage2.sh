@@ -64,7 +64,7 @@ options=" \
 	--weight-decay 0.0001 \
 	--adam-beta1 0.9 \
 	--adam-beta2 0.999 \
-	--num-workers 32 \
+	--num-workers 128 \
 	--gradient-checkpointing \
 	--bf16"
 
