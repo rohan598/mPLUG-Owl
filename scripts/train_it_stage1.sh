@@ -29,19 +29,18 @@ SAVE_NAME="${EXP_NAME}_ft_grad_ckpt_dataset_lr_$3-$4-${DATETIME}"
 SAVE_PATH="/local1/rwadhawan/document_understanding/results/mplug_owl/${SAVE_NAME}"  
 
 max_length=512
-micro_batch_size=128
+micro_batch_size=64
 # global_batch_size=256
 gradient_accumulation_steps=1
 
-# train_iters = total_data * train_epochs // global_batch_size
+# train_iters = total_data * train_epochs // global_batch_size 0.0118
 # 361481 * 3 / 256 = 4236
 train_epochs=$5
-train_iters=4236
 
 lr_warmup_iters=10
 
-eval_iter=100
-save_interval=500
+eval_iter=50
+save_interval=250
 
 mkdir -p ${SAVE_PATH}
 
@@ -49,7 +48,6 @@ options=" \
 	--pretrained-ckpt $1 \
 	--seq-length ${max_length} \
 	--micro-batch-size ${micro_batch_size} \
-	--num-training-steps ${train_iters} \
     --train-epochs ${train_epochs} \
 	--num-warmup-steps ${lr_warmup_iters} \
 	--gradient-accumulation-steps ${gradient_accumulation_steps} \

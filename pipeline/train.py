@@ -266,7 +266,7 @@ def main():
             do_train=args.do_train,
             num_train_epochs=args.train_epochs,
             output_dir=args.save_path,
-            save_strategy='steps',
+            save_strategy='epoch',#'steps',
             save_steps=args.save_interval,
             evaluation_strategy='steps',
             eval_steps=args.eval_iters,
