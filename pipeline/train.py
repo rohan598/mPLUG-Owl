@@ -25,8 +25,6 @@ parser = argparse.ArgumentParser()
 # Model
 parser.add_argument('--pretrained-ckpt', type=str, default='MAGAer13/mplug-owl-llama-7b-pt',
                     help='Path to the pretrained checkpoint.')
-parser.add_argument('--lora-ckpt', type=str, default='',
-                    help='Path to the lora checkpoint.')
 parser.add_argument('--inference_mode', type=bool, default=False,
                     help='The inference mode.')
 parser.add_argument('--seq-length', type=int, default=1024,
@@ -222,11 +220,46 @@ def main():
         print(f"Base model trainable params: {pytorch_trainable_params} and total params: {pytorch_total_params}")
 
         # Load the LoRA model
-        lora_save_filepath = os.path.join("/".join(args.save_path.split("/")[:-1]),args.lora_ckpt)
-        stage1_model = PeftModel.from_pretrained(model=model, model_id=lora_save_filepath, is_trainable=True)
+        lora_ckpt = os.path.join("/".join(args.pretrained_ckpt.split("/")[:-1]))
+        stage1_model = PeftModel.from_pretrained(model=model, model_id=lora_ckpt, is_trainable=True)
         print("Stage 1 model params with trainable LORA")
         stage1_model.print_trainable_parameters()
+        if args.gradient_checkpointing:
+            def make_inputs_require_grad(module, input, output):
+                output.requires_grad_(True)
+            model.language_model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+            model.language_model.apply(
+                partial(model.language_model._set_gradient_checkpointing, value=True))
     
+        final_model = stage1_model
+
+    elif training_stage == 3:
+        print("In training stage 2b")
+
+        pytorch_total_params = sum(p.numel() for p in model.parameters())
+        pytorch_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+        print(f"Base model trainable params: {pytorch_trainable_params} and total params: {pytorch_total_params}")
+
+
+        peft_config = LoraConfig(
+            target_modules=r'.*language_model.*\.(q_proj|v_proj)', 
+            inference_mode=args.inference_mode, 
+            r=args.lora_r, 
+            lora_alpha=args.lora_alpha, 
+            lora_dropout=args.lora_dropout
+        )
+        stage1_model = get_peft_model(model, peft_config)
+        print("Stage 1 model params with trainable visual abstractor and LORA")
+        stage1_model.print_trainable_parameters()
+        
+        if args.gradient_checkpointing:
+            def make_inputs_require_grad(module, input, output):
+                output.requires_grad_(True)
+            model.language_model.get_input_embeddings().register_forward_hook(make_inputs_require_grad)
+            model.language_model.apply(
+                partial(model.language_model._set_gradient_checkpointing, value=True))
+
         final_model = stage1_model
             
     else:

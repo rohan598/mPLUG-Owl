@@ -23,7 +23,7 @@ DISTRIBUTED_ARGS="--nproc_per_node ${num_devices} \
                   --master_addr ${MASTER_ADDR} \
                   --master_port ${MASTER_PORT}"
 
-EXP_NAME=stage_2
+EXP_NAME=stage_2b
 SAVE_NAME="${EXP_NAME}_ft_grad_ckpt_dataset_lr_$3-$4-${DATETIME}"
 
 SAVE_PATH="/local1/rwadhawan/document_understanding/results/mplug_owl/${SAVE_NAME}"  
@@ -66,7 +66,7 @@ options=" \
 	--bf16"
 
 multimodal_options=" \
-	--mm-config configs/stage2.yaml 
+	--mm-config configs/stage2b.yaml 
     "
 
 python -m torch.distributed.launch $DISTRIBUTED_ARGS ./pipeline/train.py $@ ${options} ${multimodal_options} 2>&1 | tee ${SAVE_PATH}/train.log 
