@@ -29,7 +29,7 @@ SAVE_NAME="${EXP_NAME}_ft_grad_ckpt_dataset_lr_$3-$4-${DATETIME}"
 SAVE_PATH="/local1/rwadhawan/document_understanding/results/mplug_owl/${SAVE_NAME}"  
 
 max_length=512
-micro_batch_size=64
+micro_batch_size=128
 # global_batch_size=256
 gradient_accumulation_steps=1
 
@@ -37,7 +37,7 @@ gradient_accumulation_steps=1
 # 361481 * 3 / 256 = 4236
 train_epochs=$5
 
-lr_warmup_iters=10
+lr_warmup_iters=50
 
 eval_iter=50
 save_interval=250

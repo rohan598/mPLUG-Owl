@@ -156,7 +156,8 @@ def main():
             # freeze base model's layers
             param.requires_grad = False
         peft_config = LoraConfig(
-            target_modules=r'.*language_model.*\.(q_proj|v_proj)', 
+            target_modules=r'.*language_model.*\.(q_proj|v_proj|k_proj|o_proj|gate_proj|down_proj|up_proj)',
+            # target_modules=r'.*language_model.*\.(q_proj|v_proj)', 
             inference_mode=args.inference_mode, 
             r=args.lora_r, 
             lora_alpha=args.lora_alpha, 
@@ -314,7 +315,10 @@ def main():
             logging_nan_inf_filter=args.logging_nan_inf_filter,
             ddp_find_unused_parameters=args.ddp_find_unused_parameters,
             report_to="wandb",
-            run_name=args.save_path.split("/")[-1]
+            save_total_limit=1,
+            run_name=args.save_path.split("/")[-1],
+            # load_best_model_at_end=True,
+            # save_total_limit=3
         ),
     )
 
